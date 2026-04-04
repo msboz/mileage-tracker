@@ -1,111 +1,106 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  margin: 0;
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f4f4f8;
+  color: #1a1a1a;
+  max-width: 480px;
   margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  min-height: 100vh;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* Page layout */
+.page { display: flex; flex-direction: column; min-height: 100vh; padding: 16px 16px 0; }
+.page-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px; padding-bottom: 12px;
+  border-bottom: 1px solid #e5e5ea;
+}
+.page-header h1 { flex: 1; font-size: 22px; font-weight: 700; }
+.page-footer {
+  position: sticky; bottom: 0; background: #f4f4f8;
+  padding: 12px 0 20px; display: flex; flex-direction: column; gap: 10px;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+/* Login */
+.login-page {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh; gap: 20px;
+  text-align: center; padding: 32px;
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
+.login-page h1 { font-size: 34px; font-weight: 800; }
+.subtitle { color: #6e6e73; font-size: 16px; }
+
+/* Buttons */
+.btn-primary {
+  background: #007aff; color: white; border: none;
+  border-radius: 14px; padding: 16px;
+  font-size: 17px; font-weight: 600; width: 100%; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-p {
-  margin: 0;
+.btn-primary:disabled { opacity: 0.4; }
+.btn-primary:active { background: #0062cc; }
+
+.btn-secondary {
+  background: white; color: #007aff;
+  border: 2px solid #007aff; border-radius: 14px; padding: 14px;
+  font-size: 17px; font-weight: 600; width: 100%; cursor: pointer;
+}
+.btn-secondary:disabled { opacity: 0.4; }
+
+.btn-google {
+  background: white; color: #1a1a1a; border: 1px solid #d1d1d6;
+  border-radius: 14px; padding: 16px 28px;
+  font-size: 17px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+.btn-back { background: none; border: none; font-size: 22px; cursor: pointer; padding: 4px 8px; color: #007aff; }
+.btn-icon { background: none; border: none; font-size: 22px; cursor: pointer; text-decoration: none; }
+.btn-large { padding: 24px; font-size: 20px; margin: 20px 0; border-radius: 16px; }
+
+/* Forms */
+.form { display: flex; flex-direction: column; gap: 6px; }
+label { font-size: 13px; font-weight: 600; color: #6e6e73; margin-top: 14px; text-transform: uppercase; letter-spacing: 0.04em; }
+.input {
+  padding: 14px; border: 1px solid #d1d1d6;
+  border-radius: 12px; font-size: 16px; width: 100%;
+  background: white; color: #1a1a1a;
+  -webkit-appearance: none;
+}
+.input:focus { outline: none; border-color: #007aff; }
+.input-readonly {
+  padding: 14px; border: 1px solid #e5e5ea;
+  border-radius: 12px; font-size: 16px; width: 100%;
+  background: #f9f9f9; color: #6e6e73;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* Trip list */
+.trip-list { flex: 1; display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.trip-card {
+  background: white; border-radius: 14px; padding: 14px 16px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
 }
+.trip-number { font-size: 11px; font-weight: 700; color: #007aff; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.trip-times { font-size: 13px; color: #6e6e73; margin-bottom: 3px; }
+.trip-route { font-size: 15px; font-weight: 500; }
+.trip-miles { font-size: 20px; font-weight: 700; color: #007aff; margin-top: 6px; }
+.total-miles { font-size: 17px; font-weight: 700; text-align: center; padding: 8px 0; color: #1a1a1a; }
+.empty-state { text-align: center; color: #aeaeb2; font-size: 16px; padding: 48px 0; }
+
+/* Active trip banner */
+.active-trip-banner {
+  background: #f0f7ff; border: 2px solid #007aff;
+  border-radius: 14px; padding: 16px; margin-bottom: 16px;
+}
+.active-label { font-size: 12px; color: #007aff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.active-from { font-size: 18px; font-weight: 600; margin: 6px 0 4px; }
+.active-odometer { font-size: 14px; color: #6e6e73; }
+
+/* Settings */
+.settings-footer { margin-top: auto; padding: 28px 0 24px; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.user-email { color: #6e6e73; font-size: 14px; }
+
+/* Loading */
+.loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-size: 16px; color: #6e6e73; }
