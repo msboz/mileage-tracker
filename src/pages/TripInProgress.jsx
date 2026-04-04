@@ -29,40 +29,52 @@ export default function TripInProgress() {
     load()
   }, [currentUser.uid, navigate])
 
-  if (loading) return <div className="loading">Loading...</div>
+  if (loading) return (
+    <div className="loading">
+      <img src="/duplo-logo.png" alt="Duplo" className="loading-logo" />
+      <span className="loading-text">Loading...</span>
+    </div>
+  )
   if (!activeTrip) return null
 
   const from = activeTrip.startName || activeTrip.startAddress || 'Unknown'
 
   return (
     <div className="page">
-      <header className="page-header">
-        <h1>Trip In Progress</h1>
-      </header>
+      <nav className="top-bar">
+        <img src="/duplo-logo.png" alt="Duplo" className="top-bar-logo" />
+        <span className="top-bar-title">Trip In Progress</span>
+      </nav>
 
-      <div className="active-trip-banner">
-        <div className="active-label">Started at {formatTime(activeTrip.startTime)}</div>
-        <div className="active-from">From: {from}</div>
-        <div className="active-odometer">Odometer: {activeTrip.startOdometer}</div>
-      </div>
-
-      <button
-        className="btn-primary btn-large"
-        onClick={() => navigate('/end', { state: { activeTrip } })}
-      >
-        End Trip
-      </button>
-
-      {completedTrips.length > 0 && (
-        <>
-          <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>Earlier Today</h2>
-          <div className="trip-list">
-            {completedTrips.map((trip, i) => (
-              <TripCard key={trip.id} trip={trip} index={i} />
-            ))}
+      <div className="page-content">
+        <div className="active-trip-banner">
+          <div className="active-label">
+            <span className="pulse-dot" />
+            Started at {formatTime(activeTrip.startTime)}
           </div>
-        </>
-      )}
+          <div className="active-from">{from}</div>
+          <div className="active-odometer">Odometer: {activeTrip.startOdometer}</div>
+        </div>
+
+        <button
+          className="btn-primary btn-large"
+          style={{ marginTop: 12 }}
+          onClick={() => navigate('/end', { state: { activeTrip } })}
+        >
+          ■ End Trip
+        </button>
+
+        {completedTrips.length > 0 && (
+          <>
+            <p className="section-label">Earlier Today</p>
+            <div className="trip-list">
+              {completedTrips.map((trip, i) => (
+                <TripCard key={trip.id} trip={trip} index={i} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

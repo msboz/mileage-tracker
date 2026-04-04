@@ -16,17 +16,22 @@ export default function TodayLog() {
 
   useEffect(() => {
     async function load() {
-      const [todayTrips, active] = await Promise.all([
-        getTodaysTrips(currentUser.uid),
-        getActiveTrip(currentUser.uid),
-      ])
-      if (active) {
-        navigate('/in-progress', { replace: true })
-        return
+      try {
+        const [todayTrips, active] = await Promise.all([
+          getTodaysTrips(currentUser.uid),
+          getActiveTrip(currentUser.uid),
+        ])
+        if (active) {
+          navigate('/in-progress', { replace: true })
+          return
+        }
+        setTrips(todayTrips.filter((t) => t.status === 'completed'))
+        setActiveTrip(active)
+      } catch (err) {
+        console.error('Failed to load trips:', err)
+      } finally {
+        setLoading(false)
       }
-      setTrips(todayTrips.filter((t) => t.status === 'completed'))
-      setActiveTrip(active)
-      setLoading(false)
     }
     load()
   }, [currentUser.uid, navigate])
@@ -40,32 +45,48 @@ export default function TodayLog() {
     await shareCSV(trips, today, recipientEmail)
   }
 
-  if (loading) return <div className="loading">Loading...</div>
+  if (loading) return (
+    <div className="loading">
+      <img src="/duplo-logo.png" alt="Duplo" className="loading-logo" />
+      <span className="loading-text">Loading...</span>
+    </div>
+  )
 
   return (
     <div className="page">
-      <header className="page-header">
-        <h1>Today's Log</h1>
-        <Link to="/settings" className="btn-icon" aria-label="Settings">⚙️</Link>
-      </header>
+      <nav className="top-bar">
+        <img src="/duplo-logo.png" alt="Duplo" className="top-bar-logo" />
+        <span className="top-bar-title">Today's Log</span>
+        <Link to="/settings" className="top-bar-action" aria-label="Settings">⚙️</Link>
+      </nav>
 
-      <div className="trip-list">
-        {trips.length === 0 && (
-          <p className="empty-state">No trips logged yet today</p>
+      <div className="page-content">
+        {trips.length === 0 ? (
+          <div className="empty-state">
+            <span className="empty-icon">🚗</span>
+            <span>No trips logged yet today</span>
+            <span style={{ fontSize: 13 }}>Tap Start Trip to begin</span>
+          </div>
+        ) : (
+          <div className="trip-list">
+            {trips.map((trip, i) => (
+              <TripCard key={trip.id} trip={trip} index={i} />
+            ))}
+          </div>
         )}
-        {trips.map((trip, i) => (
-          <TripCard key={trip.id} trip={trip} index={i} />
-        ))}
       </div>
 
       <div className="page-footer">
-        <div className="total-miles">Total: {totalMiles} mi</div>
+        <div className="total-row">
+          <span className="total-label">Total Miles Today</span>
+          <span className="total-value">{totalMiles} mi</span>
+        </div>
         <button
           className="btn-secondary"
           onClick={handleEmailLog}
           disabled={trips.length === 0}
         >
-          Email Log
+          📧 Email Log
         </button>
         <button className="btn-primary" onClick={() => navigate('/start')}>
           + Start Trip
