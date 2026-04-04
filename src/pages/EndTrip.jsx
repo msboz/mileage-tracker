@@ -51,41 +51,44 @@ export default function EndTrip() {
 
   return (
     <div className="page">
-      <header className="page-header">
-        <button className="btn-back" onClick={() => navigate(-1)}>←</button>
-        <h1>End Trip</h1>
-      </header>
+      <nav className="top-bar">
+        <button className="btn-back-nav" onClick={() => navigate(-1)}>←</button>
+        <img src="/duplo-logo.png" alt="Duplo" className="top-bar-logo" />
+        <span className="top-bar-title">End Trip</span>
+      </nav>
 
-      <div className="form">
-        <label>Date & Time</label>
-        <input value={now.toLocaleString()} readOnly className="input-readonly" />
+      <div className="page-content">
+        <div className="form">
+          <label>Date &amp; Time</label>
+          <input value={now.toLocaleString()} readOnly className="input-readonly" />
 
-        <label>Odometer *</label>
-        <input
-          type="number"
-          inputMode="numeric"
-          value={odometer}
-          onChange={(e) => setOdometer(e.target.value)}
-          placeholder="Current odometer reading"
-          className="input"
-          autoFocus
-        />
+          <label>Odometer *</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={odometer}
+            onChange={(e) => setOdometer(e.target.value)}
+            placeholder="Current odometer reading"
+            className="input"
+            autoFocus
+          />
 
-        <label>Location {locating ? '(detecting...)' : ''}</label>
-        <input
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Address"
-          className="input"
-        />
+          <label>Location {locating ? '(detecting…)' : ''}</label>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Address"
+            className="input"
+          />
 
-        <label>Location Name (optional)</label>
-        <input
-          value={locationName}
-          onChange={(e) => setLocationName(e.target.value)}
-          placeholder="e.g. ABC Company"
-          className="input"
-        />
+          <label>Location Name (optional)</label>
+          <input
+            value={locationName}
+            onChange={(e) => setLocationName(e.target.value)}
+            placeholder="e.g. ABC Company"
+            className="input"
+          />
+        </div>
       </div>
 
       <div className="page-footer">
@@ -94,7 +97,7 @@ export default function EndTrip() {
           onClick={handleSave}
           disabled={!odometer || saving}
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? 'Saving…' : '✓ Save Trip'}
         </button>
       </div>
     </div>
