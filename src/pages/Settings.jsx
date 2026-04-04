@@ -1,31 +1,9 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
-import { db } from '../firebase'
 
 export default function Settings() {
   const { currentUser, signOut } = useAuth()
   const navigate = useNavigate()
-  const [recipientEmail, setRecipientEmail] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    async function load() {
-      const snap = await getDoc(doc(db, 'users', currentUser.uid))
-      if (snap.exists()) setRecipientEmail(snap.data().recipientEmail || '')
-    }
-    load()
-  }, [currentUser.uid])
-
-  async function handleSave() {
-    setSaving(true)
-    await setDoc(doc(db, 'users', currentUser.uid), { recipientEmail }, { merge: true })
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
 
   async function handleSignOut() {
     await signOut()
@@ -54,23 +32,20 @@ export default function Settings() {
           </div>
         </div>
 
-        <p className="section-label">Email Report</p>
-        <div className="form">
-          <label>Send daily log to</label>
-          <input
-            type="email"
-            inputMode="email"
-            value={recipientEmail}
-            onChange={(e) => setRecipientEmail(e.target.value)}
-            placeholder="reports@example.com"
-            className="input"
-          />
-          <div style={{ paddingTop: 16 }}>
-            <button className="btn-primary" onClick={handleSave} disabled={saving}>
-              {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </div>
+        <p className="section-label">Administration</p>
+        <button
+          className="btn-secondary"
+          onClick={() => navigate('/global-settings')}
+          style={{ marginBottom: 10 }}
+        >
+          ⚙️ Global Settings
+        </button>
+        <button
+          className="btn-secondary"
+          onClick={() => navigate('/admin')}
+        >
+          📋 Admin Dashboard
+        </button>
 
         <div className="settings-footer">
           <button className="btn-secondary" onClick={handleSignOut}>

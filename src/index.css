@@ -396,3 +396,79 @@ label {
 
 /* ── Divider ──────────────────────────────────────── */
 .divider { height: 1px; background: var(--gray-100); margin: 8px 0; }
+
+/* ── Trip card reimbursement ──────────────────────── */
+.trip-reimb {
+  font-size: 13px;
+  color: var(--success);
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+/* ── Password gate ────────────────────────────────── */
+.pw-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 14px;
+  padding: 32px 24px;
+}
+.pw-gate-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+.pw-gate-error {
+  font-size: 13px;
+  color: #c0392b;
+  font-weight: 600;
+}
+
+/* ── Admin dashboard ──────────────────────────────── */
+.admin-user-group {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.admin-group-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  border-left: 4px solid var(--duplo-navy);
+  gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.admin-group-header:active { background: var(--gray-50); }
+.admin-group-name { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+.admin-group-meta { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+.admin-group-totals { text-align: right; flex-shrink: 0; }
+.admin-group-miles { font-size: 18px; font-weight: 800; color: var(--duplo-navy); letter-spacing: -0.01em; }
+.admin-group-reimb { font-size: 13px; color: var(--success); font-weight: 600; }
+.admin-trip-row {
+  padding: 10px 16px 10px 20px;
+  border-top: 1px solid var(--gray-100);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.admin-trip-route { font-size: 13px; color: var(--gray-600); }
+.admin-sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 12px;
+}
+.admin-sort-bar select {
+  padding: 8px 10px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background: var(--white);
+  color: var(--gray-900);
+  -webkit-appearance: none;
+}
