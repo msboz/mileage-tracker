@@ -7,6 +7,8 @@ import StartTrip from './pages/StartTrip'
 import TripInProgress from './pages/TripInProgress'
 import EndTrip from './pages/EndTrip'
 import Settings from './pages/Settings'
+import GlobalSettings from './pages/GlobalSettings'
+import AdminDashboard from './pages/AdminDashboard'
 
 export default function App() {
   return (
@@ -19,6 +21,8 @@ export default function App() {
           <Route path="/in-progress" element={<ProtectedRoute><TripInProgress /></ProtectedRoute>} />
           <Route path="/end" element={<ProtectedRoute><EndTrip /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/global-settings" element={<ProtectedRoute><GlobalSettings /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

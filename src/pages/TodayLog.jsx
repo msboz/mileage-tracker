@@ -1,32 +1,32 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { doc, getDoc } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { getTodaysTrips, getActiveTrip } from '../services/trips'
 import { shareCSV } from '../services/export'
-import { db } from '../firebase'
+import { getGlobalSettings } from '../services/globalSettings'
 import TripCard from '../components/TripCard'
 
 export default function TodayLog() {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
   const [trips, setTrips] = useState([])
-  const [activeTrip, setActiveTrip] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [globalSettings, setGlobalSettings] = useState(null)
 
   useEffect(() => {
     async function load() {
       try {
-        const [todayTrips, active] = await Promise.all([
+        const [todayTrips, active, settings] = await Promise.all([
           getTodaysTrips(currentUser.uid),
           getActiveTrip(currentUser.uid),
+          getGlobalSettings(),
         ])
         if (active) {
           navigate('/in-progress', { replace: true })
           return
         }
         setTrips(todayTrips.filter((t) => t.status === 'completed'))
-        setActiveTrip(active)
+        setGlobalSettings(settings)
       } catch (err) {
         console.error('Failed to load trips:', err)
       } finally {
@@ -36,13 +36,20 @@ export default function TodayLog() {
     load()
   }, [currentUser.uid, navigate])
 
+  const perMileRate = globalSettings?.perMileRate ?? 0.67
   const totalMiles = trips.reduce((sum, t) => sum + (t.miles || 0), 0)
+  const totalReimb = (totalMiles * perMileRate).toFixed(2)
   const today = new Date().toISOString().split('T')[0]
 
   async function handleEmailLog() {
-    const snap = await getDoc(doc(db, 'users', currentUser.uid))
-    const recipientEmail = snap.data()?.recipientEmail || ''
-    await shareCSV(trips, today, recipientEmail)
+    const settings = globalSettings || await getGlobalSettings()
+    await shareCSV(
+      trips,
+      today,
+      settings.recipientEmail,
+      settings.perMileRate ?? 0.67,
+      currentUser.displayName || currentUser.email || ''
+    )
   }
 
   if (loading) return (
@@ -70,7 +77,12 @@ export default function TodayLog() {
         ) : (
           <div className="trip-list">
             {trips.map((trip, i) => (
-              <TripCard key={trip.id} trip={trip} index={i} />
+              <TripCard
+                key={trip.id}
+                trip={trip}
+                index={i}
+                perMileRate={perMileRate}
+              />
             ))}
           </div>
         )}
@@ -81,6 +93,12 @@ export default function TodayLog() {
           <span className="total-label">Total Miles Today</span>
           <span className="total-value">{totalMiles} mi</span>
         </div>
+        {totalMiles > 0 && (
+          <div className="total-row" style={{ background: 'var(--duplo-blue)' }}>
+            <span className="total-label">Reimbursement</span>
+            <span className="total-value">${totalReimb}</span>
+          </div>
+        )}
         <button
           className="btn-secondary"
           onClick={handleEmailLog}
