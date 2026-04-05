@@ -1,6 +1,5 @@
-import { useState } from 'react'
-
-const CORRECT_PASSWORD = 'Duplo123'
+import { useEffect, useState } from 'react'
+import { getGlobalSettings, verifyPassword } from '../services/globalSettings'
 
 export default function PasswordGate({ sessionKey, title, description, children }) {
   const [unlocked, setUnlocked] = useState(
@@ -8,12 +7,26 @@ export default function PasswordGate({ sessionKey, title, description, children 
   )
   const [input, setInput] = useState('')
   const [error, setError] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [passwordHash, setPasswordHash] = useState(null)
+  const [loadingHash, setLoadingHash] = useState(true)
+
+  useEffect(() => {
+    if (unlocked) return
+    getGlobalSettings()
+      .then((s) => setPasswordHash(s.adminPasswordHash || ''))
+      .catch(() => setPasswordHash(''))
+      .finally(() => setLoadingHash(false))
+  }, [unlocked])
 
   if (unlocked) return children
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    if (input === CORRECT_PASSWORD) {
+    setChecking(true)
+    const ok = await verifyPassword(input, passwordHash)
+    setChecking(false)
+    if (ok) {
       sessionStorage.setItem(sessionKey, 'true')
       setUnlocked(true)
     } else {
@@ -42,9 +55,12 @@ export default function PasswordGate({ sessionKey, title, description, children 
           value={input}
           onChange={(e) => { setInput(e.target.value); setError(false) }}
           autoFocus
+          disabled={loadingHash || checking}
         />
         {error && <span className="pw-gate-error">Incorrect password. Try again.</span>}
-        <button type="submit" className="btn-primary">Unlock</button>
+        <button type="submit" className="btn-primary" disabled={loadingHash || checking}>
+          {checking ? 'Checking…' : loadingHash ? 'Loading…' : 'Unlock'}
+        </button>
       </form>
     </div>
   )

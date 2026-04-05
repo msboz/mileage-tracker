@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PasswordGate from '../components/PasswordGate'
-import { getGlobalSettings, saveGlobalSettings } from '../services/globalSettings'
+import { getGlobalSettings, saveGlobalSettings, hashPassword, verifyPassword } from '../services/globalSettings'
 
 function GlobalSettingsForm() {
   const [recipientEmail, setRecipientEmail] = useState('')
@@ -11,12 +11,22 @@ function GlobalSettingsForm() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  // Password change state
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [pwSaved, setPwSaved] = useState(false)
+  const [storedHash, setStoredHash] = useState('')
+
   useEffect(() => {
     getGlobalSettings()
       .then((s) => {
         setRecipientEmail(s.recipientEmail || '')
         setPerMileRate(String(s.perMileRate ?? 0.67))
         setAdminEmailsText((s.adminEmails || []).join('\n'))
+        setStoredHash(s.adminPasswordHash || '')
       })
       .catch((err) => console.error('GlobalSettings load error:', err))
       .finally(() => setLoading(false))
@@ -38,6 +48,33 @@ function GlobalSettingsForm() {
     setTimeout(() => setSaved(false), 2000)
   }
 
+  async function handleChangePassword() {
+    setPwError('')
+    if (!newPw) { setPwError('New password cannot be empty.'); return }
+    if (newPw !== confirmPw) { setPwError('New passwords do not match.'); return }
+    if (newPw.length < 6) { setPwError('Password must be at least 6 characters.'); return }
+
+    setPwSaving(true)
+    const currentOk = await verifyPassword(currentPw, storedHash)
+    if (!currentOk) {
+      setPwError('Current password is incorrect.')
+      setPwSaving(false)
+      return
+    }
+    const newHash = await hashPassword(newPw)
+    await saveGlobalSettings({ adminPasswordHash: newHash })
+    setStoredHash(newHash)
+    // Clear the session so any new login uses the new password
+    sessionStorage.removeItem('globalSettingsUnlocked')
+    sessionStorage.removeItem('adminUnlocked')
+    setCurrentPw('')
+    setNewPw('')
+    setConfirmPw('')
+    setPwSaving(false)
+    setPwSaved(true)
+    setTimeout(() => setPwSaved(false), 3000)
+  }
+
   if (loading) return (
     <div style={{ paddingTop: 40, textAlign: 'center', color: 'var(--gray-400)' }}>
       Loading…
@@ -46,6 +83,7 @@ function GlobalSettingsForm() {
 
   return (
     <div className="page-content">
+      {/* ── General settings ── */}
       <div className="form">
         <label>Mileage Report Recipient Email</label>
         <input
@@ -88,6 +126,52 @@ function GlobalSettingsForm() {
         <div style={{ paddingTop: 16 }}>
           <button className="btn-primary" onClick={handleSave} disabled={saving}>
             {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Global Settings'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Change password ── */}
+      <p className="section-label" style={{ marginTop: 24 }}>Change Admin Password</p>
+      <div className="form">
+        <label>Current Password</label>
+        <input
+          type="password"
+          className="input"
+          placeholder="Current password"
+          value={currentPw}
+          onChange={(e) => { setCurrentPw(e.target.value); setPwError('') }}
+        />
+        <label>New Password</label>
+        <input
+          type="password"
+          className="input"
+          placeholder="New password (min 6 characters)"
+          value={newPw}
+          onChange={(e) => { setNewPw(e.target.value); setPwError('') }}
+        />
+        <label>Confirm New Password</label>
+        <input
+          type="password"
+          className="input"
+          placeholder="Repeat new password"
+          value={confirmPw}
+          onChange={(e) => { setConfirmPw(e.target.value); setPwError('') }}
+        />
+        {pwError && (
+          <span style={{ fontSize: 13, color: '#c0392b', fontWeight: 600 }}>{pwError}</span>
+        )}
+        {pwSaved && (
+          <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
+            ✓ Password changed. You will need to re-enter it next time.
+          </span>
+        )}
+        <div style={{ paddingTop: 8, paddingBottom: 24 }}>
+          <button
+            className="btn-secondary"
+            onClick={handleChangePassword}
+            disabled={pwSaving || !currentPw || !newPw || !confirmPw}
+          >
+            {pwSaving ? 'Saving…' : 'Change Password'}
           </button>
         </div>
       </div>
