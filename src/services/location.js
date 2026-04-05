@@ -25,5 +25,10 @@ export async function reverseGeocode(lat, lon) {
   const res = await fetch(url, { headers: { 'Accept-Language': 'en' } })
   if (!res.ok) throw new Error('Geocoding failed')
   const data = await res.json()
-  return data.display_name || ''
+  const a = data.address || {}
+  const street = [a.house_number, a.road].filter(Boolean).join(' ')
+  const city = a.city || a.town || a.village || a.hamlet || ''
+  const state = a.state || ''
+  const zip = a.postcode || ''
+  return [street, city, state, zip].filter(Boolean).join(', ')
 }
