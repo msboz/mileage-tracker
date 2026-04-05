@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import {
-  GoogleAuthProvider, signInWithPopup,
+  GoogleAuthProvider, signInWithRedirect, getRedirectResult,
   signOut as fbSignOut, onAuthStateChanged,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
@@ -8,21 +8,34 @@ import { auth, db } from '../firebase'
 
 const AuthContext = createContext(null)
 
+async function ensureUserDoc(user) {
+  const userRef = doc(db, 'users', user.uid)
+  const snap = await getDoc(userRef)
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      email: user.email,
+      displayName: user.displayName,
+      recipientEmail: '',
+    })
+  }
+}
+
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(undefined) // undefined = still loading
 
   useEffect(() => {
+    // Handle the redirect result when returning from Google sign-in
+    getRedirectResult(auth).then(async (result) => {
+      if (result?.user) {
+        await ensureUserDoc(result.user)
+      }
+    }).catch((err) => {
+      console.error('Redirect sign-in error:', err.message)
+    })
+
     return onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userRef = doc(db, 'users', user.uid)
-        const snap = await getDoc(userRef)
-        if (!snap.exists()) {
-          await setDoc(userRef, {
-            email: user.email,
-            displayName: user.displayName,
-            recipientEmail: '',
-          })
-        }
+        await ensureUserDoc(user)
       }
       setCurrentUser(user)
     })
@@ -30,7 +43,7 @@ export function AuthProvider({ children }) {
 
   async function signInWithGoogle() {
     const provider = new GoogleAuthProvider()
-    await signInWithPopup(auth, provider)
+    await signInWithRedirect(auth, provider)
   }
 
   async function signOut() {
