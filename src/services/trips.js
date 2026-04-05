@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 
-export async function startTrip({ userId, startOdometer, startAddress, startName }) {
+export async function startTrip({ userId, startOdometer, startAddress, startName, equipment, notes }) {
   const now = Timestamp.now()
   const date = now.toDate().toISOString().split('T')[0]
   const trip = {
@@ -20,12 +20,14 @@ export async function startTrip({ userId, startOdometer, startAddress, startName
     endName: null,
     miles: null,
     status: 'in-progress',
+    equipment: equipment || '',
+    notes: notes || '',
   }
   const ref = await addDoc(collection(db, 'trips'), trip)
   return { id: ref.id, ...trip }
 }
 
-export async function endTrip(tripId, { endOdometer, endAddress, endName, startOdometer }) {
+export async function endTrip(tripId, { endOdometer, endAddress, endName, startOdometer, equipment, notes }) {
   const now = Timestamp.now()
   const miles = endOdometer - startOdometer
   const updates = {
@@ -35,6 +37,8 @@ export async function endTrip(tripId, { endOdometer, endAddress, endName, startO
     endName: endName || '',
     miles,
     status: 'completed',
+    equipment: equipment || '',
+    notes: notes || '',
   }
   await updateDoc(doc(db, 'trips', tripId), updates)
   return updates
