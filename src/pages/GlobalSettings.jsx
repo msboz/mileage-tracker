@@ -12,12 +12,14 @@ function GlobalSettingsForm() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    getGlobalSettings().then((s) => {
-      setRecipientEmail(s.recipientEmail || '')
-      setPerMileRate(String(s.perMileRate ?? 0.67))
-      setAdminEmailsText((s.adminEmails || []).join('\n'))
-      setLoading(false)
-    })
+    getGlobalSettings()
+      .then((s) => {
+        setRecipientEmail(s.recipientEmail || '')
+        setPerMileRate(String(s.perMileRate ?? 0.67))
+        setAdminEmailsText((s.adminEmails || []).join('\n'))
+      })
+      .catch((err) => console.error('GlobalSettings load error:', err))
+      .finally(() => setLoading(false))
   }, [])
 
   async function handleSave() {
