@@ -5,6 +5,7 @@ import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { getGlobalSettings } from '../services/globalSettings'
 import { formatTime, generateCSV } from '../services/export'
+import { writeAdminLog, getAdminLogs, LOG_ACTIONS, actionLabel } from '../services/adminLog'
 import PasswordGate from '../components/PasswordGate'
 
 // Download a CSV string as a file
@@ -90,6 +91,9 @@ function AdminDashboardContent() {
   const [selected, setSelected] = useState({}) // { [userId]: true }
   const [resetting, setResetting] = useState(false)
   const [confirm, setConfirm] = useState(null) // { message, onConfirm }
+  const [activityLog, setActivityLog] = useState([])
+  const [logOpen, setLogOpen] = useState(false)
+  const [logLoading, setLogLoading] = useState(false)
 
   async function loadData() {
     setLoading(true)
@@ -146,6 +150,23 @@ function AdminDashboardContent() {
 
   useEffect(() => { loadData() }, [currentUser])
 
+  async function loadLog() {
+    setLogLoading(true)
+    try {
+      const entries = await getAdminLogs(50)
+      setActivityLog(entries)
+    } catch (err) {
+      console.warn('Could not load admin log:', err.message)
+    } finally {
+      setLogLoading(false)
+    }
+  }
+
+  function toggleLog() {
+    if (!logOpen && activityLog.length === 0) loadLog()
+    setLogOpen((v) => !v)
+  }
+
   function toggleExpand(uid) {
     setExpanded((prev) => ({ ...prev, [uid]: !prev[uid] }))
   }
@@ -166,22 +187,38 @@ function AdminDashboardContent() {
   const hasSelection = selectedGroups.length > 0
 
   // ── Download ──────────────────────────────────────
-  function handleDownloadAll() {
+  async function handleDownloadAll() {
     const csv = buildGroupCSV(groups, perMileRate)
     const date = new Date().toISOString().split('T')[0]
     downloadCSV(csv, `mileage-all-users-${date}.csv`)
+    await writeAdminLog({
+      action: LOG_ACTIONS.DOWNLOAD_ALL,
+      adminEmail: currentUser.email,
+      adminName: currentUser.displayName || currentUser.email,
+      userNames: groups.map((g) => g.userName),
+      tripCount: groups.reduce((s, g) => s + g.trips.length, 0),
+    })
+    if (logOpen) loadLog()
   }
 
-  function handleDownloadSelected() {
+  async function handleDownloadSelected() {
     if (!hasSelection) return
     const csv = buildGroupCSV(selectedGroups, perMileRate)
     const names = selectedGroups.map((g) => g.userName.split(' ')[0]).join('-')
     const date = new Date().toISOString().split('T')[0]
     downloadCSV(csv, `mileage-${names}-${date}.csv`)
+    await writeAdminLog({
+      action: LOG_ACTIONS.DOWNLOAD_SELECTED,
+      adminEmail: currentUser.email,
+      adminName: currentUser.displayName || currentUser.email,
+      userNames: selectedGroups.map((g) => g.userName),
+      tripCount: selectedGroups.reduce((s, g) => s + g.trips.length, 0),
+    })
+    if (logOpen) loadLog()
   }
 
   // ── Reset (delete completed trips) ────────────────
-  async function doReset(targetGroups, label) {
+  async function doReset(targetGroups, action) {
     setResetting(true)
     try {
       const tripIds = targetGroups.flatMap((g) => g.trips.map((t) => t.id))
@@ -194,8 +231,16 @@ function AdminDashboardContent() {
         })
         await batch.commit()
       }
+      await writeAdminLog({
+        action,
+        adminEmail: currentUser.email,
+        adminName: currentUser.displayName || currentUser.email,
+        userNames: targetGroups.map((g) => g.userName),
+        tripCount: tripIds.length,
+      })
       setSelected({})
       await loadData()
+      if (logOpen) loadLog()
     } catch (err) {
       console.error('Reset error:', err)
       alert(`Reset failed: ${err.message}`)
@@ -208,7 +253,7 @@ function AdminDashboardContent() {
   function handleResetAll() {
     setConfirm({
       message: `This will permanently delete ALL ${groups.reduce((s, g) => s + g.trips.length, 0)} trips for all ${groups.length} users. This cannot be undone.`,
-      onConfirm: () => doReset(groups, 'all'),
+      onConfirm: () => doReset(groups, LOG_ACTIONS.RESET_ALL),
     })
   }
 
@@ -218,7 +263,7 @@ function AdminDashboardContent() {
     const names = selectedGroups.map((g) => g.userName).join(', ')
     setConfirm({
       message: `This will permanently delete ${tripCount} trip${tripCount !== 1 ? 's' : ''} for: ${names}. This cannot be undone.`,
-      onConfirm: () => doReset(selectedGroups, 'selected'),
+      onConfirm: () => doReset(selectedGroups, LOG_ACTIONS.RESET_SELECTED),
     })
   }
 
@@ -328,6 +373,45 @@ function AdminDashboardContent() {
           <span>No completed trips found</span>
         </div>
       )}
+
+      {/* Activity Log */}
+      <div className="activity-log-section">
+        <button className="activity-log-toggle" onClick={toggleLog}>
+          <span>📋 Activity Log</span>
+          <span>{logOpen ? '▲' : '▼'}</span>
+        </button>
+        {logOpen && (
+          <div className="activity-log-body">
+            {logLoading ? (
+              <div style={{ padding: '12px 0', textAlign: 'center', color: 'var(--gray-400)', fontSize: 13 }}>
+                Loading log…
+              </div>
+            ) : activityLog.length === 0 ? (
+              <div style={{ padding: '12px 0', textAlign: 'center', color: 'var(--gray-400)', fontSize: 13 }}>
+                No activity recorded yet
+              </div>
+            ) : (
+              activityLog.map((entry) => {
+                const ts = entry.timestamp?.toDate ? entry.timestamp.toDate() : new Date()
+                const dateStr = ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                const timeStr = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                return (
+                  <div key={entry.id} className="activity-log-entry">
+                    <div className="activity-log-action">{actionLabel(entry.action)}</div>
+                    <div className="activity-log-meta">
+                      {entry.adminName || entry.adminEmail} · {dateStr} {timeStr}
+                    </div>
+                    <div className="activity-log-detail">
+                      {entry.tripCount} trip{entry.tripCount !== 1 ? 's' : ''}
+                      {entry.userNames?.length > 0 && ` · ${entry.userNames.join(', ')}`}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+      </div>
 
       {sorted.map((group) => {
         const reimb = (group.totalMiles * perMileRate).toFixed(2)

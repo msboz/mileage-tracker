@@ -521,3 +521,52 @@ label {
   padding: 2px 0;
   text-decoration: underline;
 }
+
+/* ── Activity Log ─────────────────────────────────── */
+.activity-log-section {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.activity-log-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--duplo-navy);
+  cursor: pointer;
+  text-align: left;
+}
+.activity-log-toggle:active { background: var(--gray-50); }
+.activity-log-body {
+  border-top: 1px solid var(--gray-100);
+  max-height: 280px;
+  overflow-y: auto;
+}
+.activity-log-entry {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.activity-log-entry:last-child { border-bottom: none; }
+.activity-log-action {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--duplo-navy);
+  margin-bottom: 2px;
+}
+.activity-log-meta {
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-bottom: 2px;
+}
+.activity-log-detail {
+  font-size: 12px;
+  color: var(--gray-600);
+}

@@ -29,8 +29,13 @@ service cloud.firestore {
         && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.userId;
-      // Admins can read all trips
-      allow read: if isAdmin();
+      // Admins can read and delete all trips
+      allow read, delete: if isAdmin();
+    }
+
+    // Admin audit log — only admins can read or write
+    match /adminLogs/{logId} {
+      allow read, write: if isAdmin();
     }
   }
 }
