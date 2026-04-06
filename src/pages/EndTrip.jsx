@@ -74,7 +74,7 @@ export default function EndTrip() {
           <input
             value={equipment}
             onChange={(e) => setEquipment(e.target.value)}
-            placeholder="e.g. Truck, Van, Trailer"
+            placeholder="e.g. DC-618"
             className="input"
           />
 

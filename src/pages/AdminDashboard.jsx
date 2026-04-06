@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, query, where, orderBy, getDocs, doc, getDoc, writeBatch } from 'firebase/firestore'
+import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { getGlobalSettings } from '../services/globalSettings'
 import { formatTime, generateCSV } from '../services/export'
 import { writeAdminLog, getAdminLogs, LOG_ACTIONS, actionLabel } from '../services/adminLog'
+import {
+  softDeleteTrips, getDeletedTrips, restoreTrip, purgeTrips, TEN_DAYS_MS,
+} from '../services/trips'
 import PasswordGate from '../components/PasswordGate'
 
 // Download a CSV string as a file
@@ -94,6 +97,10 @@ function AdminDashboardContent() {
   const [activityLog, setActivityLog] = useState([])
   const [logOpen, setLogOpen] = useState(false)
   const [logLoading, setLogLoading] = useState(false)
+  const [binGroups, setBinGroups] = useState([])
+  const [binOpen, setBinOpen] = useState(false)
+  const [binLoading, setBinLoading] = useState(false)
+  const [binActing, setBinActing] = useState(false)
 
   async function loadData() {
     setLoading(true)
@@ -167,6 +174,79 @@ function AdminDashboardContent() {
     setLogOpen((v) => !v)
   }
 
+  // ── Recycle Bin ───────────────────────────────────
+  async function loadBin() {
+    setBinLoading(true)
+    try {
+      const trips = await getDeletedTrips()
+      const now = Date.now()
+
+      // Auto-purge trips older than 10 days
+      const expired = trips.filter((t) => {
+        const ms = t.deletedAt?.toDate ? t.deletedAt.toDate().getTime() : 0
+        return now - ms > TEN_DAYS_MS
+      })
+      if (expired.length > 0) await purgeTrips(expired.map((t) => t.id))
+
+      const active = trips.filter((t) => {
+        const ms = t.deletedAt?.toDate ? t.deletedAt.toDate().getTime() : 0
+        return now - ms <= TEN_DAYS_MS
+      })
+
+      // Build user name map from already-loaded groups + Firestore fallback
+      const nameMap = {}
+      groups.forEach((g) => { nameMap[g.userId] = g.userName })
+      const unknownIds = [...new Set(active.map((t) => t.userId).filter((id) => !nameMap[id]))]
+      await Promise.all(unknownIds.map(async (uid) => {
+        try {
+          const uSnap = await getDoc(doc(db, 'users', uid))
+          nameMap[uid] = uSnap.exists()
+            ? uSnap.data().displayName || uSnap.data().email || uid
+            : uid
+        } catch { nameMap[uid] = uid }
+      }))
+
+      // Group by user
+      const byUser = {}
+      for (const trip of active) {
+        if (!byUser[trip.userId]) {
+          byUser[trip.userId] = { userId: trip.userId, userName: nameMap[trip.userId] || trip.userId, trips: [] }
+        }
+        byUser[trip.userId].trips.push(trip)
+      }
+      setBinGroups(Object.values(byUser))
+    } catch (err) {
+      console.warn('Could not load bin:', err.message)
+    } finally {
+      setBinLoading(false)
+    }
+  }
+
+  function toggleBin() {
+    if (!binOpen) loadBin()
+    setBinOpen((v) => !v)
+  }
+
+  async function handleRestore(tripId) {
+    setBinActing(true)
+    try {
+      await restoreTrip(tripId)
+      await Promise.all([loadBin(), loadData()])
+    } finally {
+      setBinActing(false)
+    }
+  }
+
+  async function handlePurgeOne(tripId) {
+    setBinActing(true)
+    try {
+      await purgeTrips([tripId])
+      await loadBin()
+    } finally {
+      setBinActing(false)
+    }
+  }
+
   function toggleExpand(uid) {
     setExpanded((prev) => ({ ...prev, [uid]: !prev[uid] }))
   }
@@ -217,20 +297,12 @@ function AdminDashboardContent() {
     if (logOpen) loadLog()
   }
 
-  // ── Reset (delete completed trips) ────────────────
+  // ── Reset (soft-delete — recoverable for 10 days) ─
   async function doReset(targetGroups, action) {
     setResetting(true)
     try {
       const tripIds = targetGroups.flatMap((g) => g.trips.map((t) => t.id))
-      // Firestore batch deletes — max 500 per batch
-      const BATCH_SIZE = 500
-      for (let i = 0; i < tripIds.length; i += BATCH_SIZE) {
-        const batch = writeBatch(db)
-        tripIds.slice(i, i + BATCH_SIZE).forEach((id) => {
-          batch.delete(doc(db, 'trips', id))
-        })
-        await batch.commit()
-      }
+      await softDeleteTrips(tripIds)
       await writeAdminLog({
         action,
         adminEmail: currentUser.email,
@@ -241,6 +313,7 @@ function AdminDashboardContent() {
       setSelected({})
       await loadData()
       if (logOpen) loadLog()
+      if (binOpen) loadBin()
     } catch (err) {
       console.error('Reset error:', err)
       alert(`Reset failed: ${err.message}`)
@@ -373,6 +446,73 @@ function AdminDashboardContent() {
           <span>No completed trips found</span>
         </div>
       )}
+
+      {/* Recycle Bin */}
+      <div className="activity-log-section">
+        <button className="activity-log-toggle" onClick={toggleBin}>
+          <span>🗑 Recycle Bin {binGroups.length > 0 ? `(${binGroups.reduce((s, g) => s + g.trips.length, 0)})` : ''}</span>
+          <span>{binOpen ? '▲' : '▼'}</span>
+        </button>
+        {binOpen && (
+          <div className="activity-log-body">
+            {binLoading ? (
+              <div style={{ padding: '12px 0', textAlign: 'center', color: 'var(--gray-400)', fontSize: 13 }}>
+                Loading…
+              </div>
+            ) : binGroups.length === 0 ? (
+              <div style={{ padding: '12px 0', textAlign: 'center', color: 'var(--gray-400)', fontSize: 13 }}>
+                Recycle bin is empty
+              </div>
+            ) : binGroups.map((group) => (
+              <div key={group.userId}>
+                <div style={{
+                  padding: '6px 16px', fontSize: 11, fontWeight: 700,
+                  color: 'var(--duplo-navy)', background: 'var(--gray-50)',
+                  textTransform: 'uppercase', letterSpacing: '0.04em',
+                  borderBottom: '1px solid var(--gray-100)',
+                }}>
+                  {group.userName}
+                </div>
+                {group.trips.map((trip) => {
+                  const deletedMs = trip.deletedAt?.toDate ? trip.deletedAt.toDate().getTime() : Date.now()
+                  const daysLeft = Math.ceil((TEN_DAYS_MS - (Date.now() - deletedMs)) / 86400000)
+                  return (
+                    <div key={trip.id} className="bin-trip-row">
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gray-900)' }}>
+                          {trip.date} · {trip.miles} mi
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 2 }}>
+                          {trip.startAddress || '?'} → {trip.endAddress || '?'}
+                        </div>
+                        <div style={{ fontSize: 11, color: daysLeft <= 2 ? '#c0392b' : 'var(--gray-400)', marginTop: 2, fontWeight: daysLeft <= 2 ? 700 : 400 }}>
+                          {daysLeft} day{daysLeft !== 1 ? 's' : ''} until permanent deletion
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, marginLeft: 10 }}>
+                        <button
+                          className="bin-btn bin-btn-restore"
+                          onClick={() => handleRestore(trip.id)}
+                          disabled={binActing}
+                        >
+                          ↩ Restore
+                        </button>
+                        <button
+                          className="bin-btn bin-btn-purge"
+                          onClick={() => handlePurgeOne(trip.id)}
+                          disabled={binActing}
+                        >
+                          ✕ Delete
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Activity Log */}
       <div className="activity-log-section">
