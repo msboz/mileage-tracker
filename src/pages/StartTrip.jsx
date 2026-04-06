@@ -9,10 +9,9 @@ export default function StartTrip() {
   const navigate = useNavigate()
   const [odometer, setOdometer] = useState('')
   const [address, setAddress] = useState('')
-  const [locationName, setLocationName] = useState('')
-  const [locating, setLocating] = useState(true)
+  const [equipment, setEquipment] = useState('')
+  const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
-  const now = new Date()
 
   useEffect(() => {
     async function init() {
@@ -26,7 +25,6 @@ export default function StartTrip() {
       if (loc.status === 'fulfilled') {
         setAddress(loc.value.address)
       }
-      setLocating(false)
     }
     init()
   }, [currentUser.uid])
@@ -38,7 +36,9 @@ export default function StartTrip() {
       userId: currentUser.uid,
       startOdometer: Number(odometer),
       startAddress: address,
-      startName: locationName,
+      startName: '',
+      equipment: equipment.trim(),
+      notes: notes.trim(),
     })
     navigate('/in-progress', { replace: true })
   }
@@ -53,9 +53,6 @@ export default function StartTrip() {
 
       <div className="page-content">
         <div className="form">
-          <label>Date &amp; Time</label>
-          <input value={now.toLocaleString()} readOnly className="input-readonly" />
-
           <label>Odometer *</label>
           <input
             type="number"
@@ -67,20 +64,22 @@ export default function StartTrip() {
             autoFocus
           />
 
-          <label>Location {locating ? '(detecting…)' : ''}</label>
+          <label>Equipment (optional)</label>
           <input
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Address"
+            value={equipment}
+            onChange={(e) => setEquipment(e.target.value)}
+            placeholder="e.g. Truck, Van, Trailer"
             className="input"
           />
 
-          <label>Location Name (optional)</label>
-          <input
-            value={locationName}
-            onChange={(e) => setLocationName(e.target.value)}
-            placeholder="e.g. Home Office"
+          <label>Notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Any notes for this trip…"
             className="input"
+            rows={3}
+            style={{ resize: 'none' }}
           />
         </div>
       </div>
