@@ -105,8 +105,14 @@ function AdminDashboardContent() {
   async function loadData() {
     setLoading(true)
     setError(null)
+
+    // Timeout so the page never hangs on a slow/missing Firestore index
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out. Check that Firestore indexes are deployed: run "firebase deploy --only firestore:indexes"')), 15000)
+    )
+
     try {
-      const settings = await getGlobalSettings()
+      const settings = await Promise.race([getGlobalSettings(), timeout])
       setPerMileRate(settings.perMileRate ?? 0.67)
 
       const q = query(
@@ -114,7 +120,7 @@ function AdminDashboardContent() {
         where('status', '==', 'completed'),
         orderBy('date', 'desc')
       )
-      const snap = await getDocs(q)
+      const snap = await Promise.race([getDocs(q), timeout])
       const trips = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 
       const byUser = {}
@@ -356,8 +362,14 @@ function AdminDashboardContent() {
   )
 
   if (error) return (
-    <div style={{ padding: 24, color: '#c0392b', textAlign: 'center', fontSize: 14 }}>
-      {error}
+    <div style={{ padding: 24, textAlign: 'center' }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+      <div style={{ color: '#c0392b', fontSize: 14, marginBottom: 16, lineHeight: 1.5 }}>
+        {error}
+      </div>
+      <button className="btn-primary" style={{ maxWidth: 200, margin: '0 auto' }} onClick={loadData}>
+        Retry
+      </button>
     </div>
   )
 
