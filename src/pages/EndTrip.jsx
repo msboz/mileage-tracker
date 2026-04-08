@@ -9,6 +9,7 @@ export default function EndTrip() {
   const navigate = useNavigate()
   const location = useLocation()
   const [activeTrip, setActiveTrip] = useState(location.state?.activeTrip || null)
+  const [companyName, setCompanyName] = useState('')
   const [odometer, setOdometer] = useState('')
   const [address, setAddress] = useState('')
   const [equipment, setEquipment] = useState('')
@@ -43,6 +44,7 @@ export default function EndTrip() {
       endAddress: address,
       endName: '',
       startOdometer: activeTrip.startOdometer,
+      companyName: companyName.trim(),
       equipment: equipment.trim(),
       notes: notes.trim(),
     })
@@ -59,6 +61,14 @@ export default function EndTrip() {
 
       <div className="page-content">
         <div className="form">
+          <label>Company Name (optional)</label>
+          <input
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="e.g. Acme Corp"
+            className="input"
+          />
+
           <label>Odometer *</label>
           <input
             type="number"

@@ -6,7 +6,7 @@ export function formatTime(timestamp) {
 
 export function generateCSV(trips, perMileRate = 0.67) {
   const header =
-    'Date,Trip #,Start Time,End Time,Start Odometer,End Odometer,Miles,Reimbursement,Start Address,End Address,Equipment,Notes'
+    'Date,Trip #,Start Time,End Time,Start Odometer,End Odometer,Miles,Reimbursement,Start Address,End Address,Company Name,Equipment,Notes'
   const rows = trips.map((trip, index) => {
     const q = (s) => `"${(s || '').replace(/"/g, '""')}"`
     const reimb = ((trip.miles || 0) * perMileRate).toFixed(2)
@@ -21,6 +21,7 @@ export function generateCSV(trips, perMileRate = 0.67) {
       reimb,
       q(trip.startAddress),
       q(trip.endAddress),
+      q(trip.companyName),
       q(trip.equipment),
       q(trip.notes),
     ].join(',')

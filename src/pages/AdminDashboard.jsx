@@ -45,6 +45,7 @@ function buildGroupCSV(groups, perMileRate) {
         reimb,
         q(trip.startAddress),
         q(trip.endAddress),
+        q(trip.companyName),
         q(trip.equipment),
         q(trip.notes),
       ].join(',')
@@ -101,6 +102,8 @@ function AdminDashboardContent() {
   const [binOpen, setBinOpen] = useState(false)
   const [binLoading, setBinLoading] = useState(false)
   const [binActing, setBinActing] = useState(false)
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   async function loadData() {
     setLoading(true)
@@ -272,33 +275,50 @@ function AdminDashboardContent() {
   const selectedGroups = groups.filter((g) => selected[g.userId])
   const hasSelection = selectedGroups.length > 0
 
+  // Filter trips within a group by date range
+  function filterByDateRange(sourceGroups) {
+    if (!fromDate && !toDate) return sourceGroups
+    return sourceGroups.map((g) => ({
+      ...g,
+      trips: g.trips.filter((t) => {
+        if (fromDate && t.date < fromDate) return false
+        if (toDate && t.date > toDate) return false
+        return true
+      }),
+    })).filter((g) => g.trips.length > 0)
+  }
+
   // ── Download ──────────────────────────────────────
   async function handleDownloadAll() {
-    const csv = buildGroupCSV(groups, perMileRate)
+    const filtered = filterByDateRange(groups)
+    const csv = buildGroupCSV(filtered, perMileRate)
     const date = new Date().toISOString().split('T')[0]
-    downloadCSV(csv, `mileage-all-users-${date}.csv`)
+    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'end'}` : ''
+    downloadCSV(csv, `mileage-all-users-${date}${suffix}.csv`)
     await writeAdminLog({
       action: LOG_ACTIONS.DOWNLOAD_ALL,
       adminEmail: currentUser.email,
       adminName: currentUser.displayName || currentUser.email,
-      userNames: groups.map((g) => g.userName),
-      tripCount: groups.reduce((s, g) => s + g.trips.length, 0),
+      userNames: filtered.map((g) => g.userName),
+      tripCount: filtered.reduce((s, g) => s + g.trips.length, 0),
     })
     if (logOpen) loadLog()
   }
 
   async function handleDownloadSelected() {
     if (!hasSelection) return
-    const csv = buildGroupCSV(selectedGroups, perMileRate)
-    const names = selectedGroups.map((g) => g.userName.split(' ')[0]).join('-')
+    const filtered = filterByDateRange(selectedGroups)
+    const csv = buildGroupCSV(filtered, perMileRate)
+    const names = filtered.map((g) => g.userName.split(' ')[0]).join('-')
     const date = new Date().toISOString().split('T')[0]
-    downloadCSV(csv, `mileage-${names}-${date}.csv`)
+    const suffix = fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'end'}` : ''
+    downloadCSV(csv, `mileage-${names}-${date}${suffix}.csv`)
     await writeAdminLog({
       action: LOG_ACTIONS.DOWNLOAD_SELECTED,
       adminEmail: currentUser.email,
       adminName: currentUser.displayName || currentUser.email,
-      userNames: selectedGroups.map((g) => g.userName),
-      tripCount: selectedGroups.reduce((s, g) => s + g.trips.length, 0),
+      userNames: filtered.map((g) => g.userName),
+      tripCount: filtered.reduce((s, g) => s + g.trips.length, 0),
     })
     if (logOpen) loadLog()
   }
@@ -400,6 +420,36 @@ function AdminDashboardContent() {
       {/* Action toolbar */}
       {groups.length > 0 && (
         <div className="admin-toolbar">
+          {/* Date range filter */}
+          <div className="date-range-row">
+            <span style={{ fontSize: 12, color: 'var(--gray-600)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              Date range
+            </span>
+            <input
+              type="date"
+              className="date-range-input"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              placeholder="From"
+            />
+            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>–</span>
+            <input
+              type="date"
+              className="date-range-input"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              placeholder="To"
+            />
+            {(fromDate || toDate) && (
+              <button
+                style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--gray-400)', cursor: 'pointer', padding: '0 2px' }}
+                onClick={() => { setFromDate(''); setToDate('') }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           <div className="admin-toolbar-row">
             <button className="admin-btn admin-btn-primary" onClick={handleDownloadAll}>
               ⬇ Download All
@@ -620,6 +670,9 @@ function AdminDashboardContent() {
                       {trip.date} · {formatTime(trip.startTime)} – {formatTime(trip.endTime)}
                     </div>
                     <div className="admin-trip-route">{from} → {to}</div>
+                    {trip.companyName && (
+                      <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 2 }}>🏢 {trip.companyName}</div>
+                    )}
                     {trip.equipment && (
                       <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 2 }}>🚗 {trip.equipment}</div>
                     )}
