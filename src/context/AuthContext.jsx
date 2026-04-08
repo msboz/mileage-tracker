@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import {
-  GoogleAuthProvider, signInWithRedirect, getRedirectResult,
+  GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
   signOut as fbSignOut, onAuthStateChanged,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
@@ -43,7 +43,17 @@ export function AuthProvider({ children }) {
 
   async function signInWithGoogle() {
     const provider = new GoogleAuthProvider()
-    await signInWithRedirect(auth, provider)
+    try {
+      // Popup works on desktop and most modern mobile browsers
+      await signInWithPopup(auth, provider)
+    } catch (err) {
+      // Fall back to redirect if popup is blocked (some mobile browsers)
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+        await signInWithRedirect(auth, provider)
+      } else {
+        throw err
+      }
+    }
   }
 
   async function signOut() {
