@@ -16,8 +16,13 @@ export default function TripCard({ trip, index, perMileRate }) {
       <div className="trip-route">{from} → {to}</div>
       <div className="trip-miles">{trip.miles} mi</div>
       {reimb && <div className="trip-reimb">Reimbursement: {reimb}</div>}
-      {trip.equipment && (
+      {trip.companyName && (
         <div style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 4 }}>
+          🏢 {trip.companyName}
+        </div>
+      )}
+      {trip.equipment && (
+        <div style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 2 }}>
           🚗 {trip.equipment}
         </div>
       )}

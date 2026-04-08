@@ -30,7 +30,7 @@ export async function startTrip({ userId, startOdometer, startAddress, startName
   return { id: ref.id, ...trip }
 }
 
-export async function endTrip(tripId, { endOdometer, endAddress, endName, startOdometer, equipment, notes }) {
+export async function endTrip(tripId, { endOdometer, endAddress, endName, startOdometer, companyName, equipment, notes }) {
   const now = Timestamp.now()
   const miles = endOdometer - startOdometer
   const updates = {
@@ -40,6 +40,7 @@ export async function endTrip(tripId, { endOdometer, endAddress, endName, startO
     endName: endName || '',
     miles,
     status: 'completed',
+    companyName: companyName || '',
     equipment: equipment || '',
     notes: notes || '',
   }

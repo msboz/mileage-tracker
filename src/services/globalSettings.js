@@ -29,17 +29,24 @@ export async function verifyPassword(input, storedHash) {
 }
 
 let _cache = null
+let _pending = null // prevent duplicate in-flight fetches
 
 export async function getGlobalSettings() {
   if (_cache) return _cache
-  try {
-    const snap = await getDoc(doc(db, 'globalSettings', 'config'))
-    _cache = snap.exists() ? { ...DEFAULTS, ...snap.data() } : { ...DEFAULTS }
-  } catch (err) {
-    console.warn('Could not load global settings, using defaults:', err.message)
-    _cache = { ...DEFAULTS }
-  }
-  return _cache
+  if (_pending) return _pending
+  _pending = (async () => {
+    try {
+      const snap = await getDoc(doc(db, 'globalSettings', 'config'))
+      _cache = snap.exists() ? { ...DEFAULTS, ...snap.data() } : { ...DEFAULTS }
+    } catch (err) {
+      console.warn('Could not load global settings, using defaults:', err.message)
+      _cache = { ...DEFAULTS }
+    } finally {
+      _pending = null
+    }
+    return _cache
+  })()
+  return _pending
 }
 
 export function clearGlobalSettingsCache() {
