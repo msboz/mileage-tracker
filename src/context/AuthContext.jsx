@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import {
   GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile,
   signOut as fbSignOut, onAuthStateChanged,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
@@ -56,12 +57,24 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function signUpWithEmail(email, password, displayName) {
+    const credential = await createUserWithEmailAndPassword(auth, email, password)
+    if (displayName) {
+      await updateProfile(credential.user, { displayName })
+    }
+    await ensureUserDoc({ ...credential.user, displayName: displayName || credential.user.displayName })
+  }
+
+  async function signInWithEmail(email, password) {
+    await signInWithEmailAndPassword(auth, email, password)
+  }
+
   async function signOut() {
     await fbSignOut(auth)
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ currentUser, signInWithGoogle, signUpWithEmail, signInWithEmail, signOut }}>
       {children}
     </AuthContext.Provider>
   )
